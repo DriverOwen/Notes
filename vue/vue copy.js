@@ -19,27 +19,39 @@ class Vue {
     }
     
     Observe(data, vm){
-      const dep = new Dep()
-      this.data = new Proxy(data,{
-        get(target,key,reciver){
-          if(Dep.target){
-           
-            dep.addSubs(Dep.target)
-          //  console.log("触发了"+key);
-            console.log(dep);
+     
+      Object.keys(data).forEach(key => {
+        const dep = new Dep() /* 实现一对多的数据更新 页面中重复多个地方使用同一数据时，统一更新  也就是一个data对应一个dep对象*/
+        /*
+          message -> dep
+          name -> dep
+
+        */
+        let value = data[key]
+        //console.log(value);
+        /* 绑定了set和get事件 只要访问或者修改属性 就会触发回调函数*/
+        Object.defineProperty(data, key, {
+          set(newValue){
+           // console.log('监听到' + key + '改变');
+            /* 监听到了改变，告诉订阅者发送改变 */
+            if(newValue !== value) {
+              value = newValue
+              dep.notify()
+            }
+          },
+          get(){
+           // console.log('获取' + key + '对应的值')
+           // console.log(Dep.target);
+            if(Dep.target) {
+              dep.addSubs(Dep.target)
+             console.log(dep);
+            }
+            return value
           }
-          return target[key]
-        },
-        set(target,key,newValue,receiver){
-          if(target[key] !== newValue){
-            target[key] = newValue
-            dep.notify()
-            return true
-          }
-        }
+        })
       })
     }
-
+  
     Compiler(el){
       /* 获取要渲染的dom内容 */
       const _this = this /* 防止this指向发生改变 */
@@ -125,10 +137,8 @@ class Watcher {
   update(){
     /* 更新页面 实现响应式 */
     Dep.target = this // 释放当前订阅者 
-   // console.log(this.name + '发送了更新----');
-   
+    //console.log(this.name + '发送了更新----');
     this.el[this.attr] = this.vm.data[this.name]
-    //console.log(this.vm.data[this.name])
     Dep.target = null // 释放当前订阅者 
   }
 
